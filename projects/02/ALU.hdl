@@ -1,0 +1,74 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/02/ALU.hdl
+
+/**
+ * The ALU (Arithmetic Logic Unit).
+ * Computes one of the following functions:
+ * x+y, x-y, y-x, 0, 1, -1, x, y, -x, -y, !x, !y,
+ * x+1, y+1, x-1, y-1, x&y, x|y on two 16-bit inputs, 
+ * according to 6 input bits denoted zx,nx,zy,ny,f,no.
+ * In addition, the ALU computes two 1-bit outputs:
+ * if the ALU output == 0, zr is set to 1; otherwise zr is set to 0;
+ * if the ALU output < 0, ng is set to 1; otherwise ng is set to 0.
+ */
+
+// Implementation: the ALU logic manipulates the x and y inputs
+// and operates on the resulting values, as follows:
+// if (zx == 1) set x = 0        // 16-bit constant
+// if (nx == 1) set x = !x       // bitwise not
+// if (zy == 1) set y = 0        // 16-bit constant
+// if (ny == 1) set y = !y       // bitwise not
+// if (f == 1)  set out = x + y  // integer 2's complement addition
+// if (f == 0)  set out = x & y  // bitwise and
+// if (no == 1) set out = !out   // bitwise not
+// if (out == 0) set zr = 1
+// if (out < 0) set ng = 1
+
+CHIP ALU {
+    IN  
+        x[16], y[16],  // 16-bit inputs        
+        zx, // zero the x input?
+        nx, // negate the x input?
+        zy, // zero the y input?
+        ny, // negate the y input?
+        f,  // compute out = x + y (if 1) or x & y (if 0)
+        no; // negate the out output?
+
+    OUT 
+        out[16], // 16-bit output
+        zr, // 1 if (out == 0), 0 otherwise
+        ng; // 1 if (out < 0),  0 otherwise
+
+    PARTS:
+    Not16 ( in=x, out=Notx);
+    Not16 ( in=y, out=Noty);
+    And16 ( a=x, b=Notx, out=zerox);
+    And16 ( a=y, b=Noty, out=zeroy);
+    Mux16 ( a=x, b=zerox, sel=zx, out=constx);
+    Mux16 ( a=y, b=zeroy, sel=zy, out=consty);
+
+    Not16 ( in=constx, out=Notconstx);
+    Not16 ( in=consty, out=Notconsty);
+    Mux16 ( a=constx, b=Notconstx, sel=nx, out=bitwisex);
+    Mux16 ( a=consty, b=Notconsty, sel=ny, out=bitwisey);
+
+    And16 ( a=bitwisex, b=bitwisey, out=and);
+    Add16 ( a=bitwisex, b=bitwisey, out=add);
+    Mux16 ( a=and, b=add, sel=f, out=prawieout);
+
+    Not16 (in=prawieout, out=Notprawieout);
+    Mux16 (a=prawieout, b=Notprawieout, sel=no, out=out);
+
+    Mux16 (a=prawieout, b=Notprawieout, sel=no, out[0]=out1,
+out[1]=out2,out[2]=out3,out[3]=out4, out[4]=out5, out[5]=out6, out[6]=out7,
+out[7]=out8,out[8]=out9,out[9]=out10, out[10]=out11, out[11]=out12, out[12]=out13,out[13]=out14,out[14]=out15,out[15]=out16 );
+    Or8Way (in[0]=out1,in[1]=out2,in[2]=out3,in[3]=out4,in[4]=out5,in[5]=out6,in[6]=out7,in[7]=out8, out=Or1); 
+    Or8Way(in[0]=out9,in[1]=out10,in[2]=out11,in[3]=out12,in[4]=out13,in[5]=out14,in[6]=out15,in[7]=out16,out=Or2); 
+    Or (a=Or1, b=Or2, out=zero);
+    Not (in=zero, out=zr);
+
+    And (a=out16, b=out16, out=ng);
+
+}
